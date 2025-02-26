@@ -1,5 +1,9 @@
 # Common Mistakes in Benchmarking Autonomous Driving
 
+> "Take nobody's word for it."
+> 
+> &mdash; <cite>Motto of the Royal Society</cite>
+
 Evaluating entire autonomous driving systems is a complex task, that is prone to subtle but significant errors. Unfortunately, such methodological mistakes are widespread in the autonomous driving literature.
 This document aims to outline these issues so that reviewers can identify them and authors can avoid them.
 The intent of this document is not to criticize individual authors or works. We all make mistakes. 
