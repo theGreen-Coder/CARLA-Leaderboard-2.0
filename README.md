@@ -1,3 +1,5 @@
+Fork of [Carla_garage](https://github.com/autonomousvision/carla_garage). It will serve as a minimum viable repository for the autonomous driving group at CVC.
+
 <p align="center">
   <img src="assets/carla_garage_white.png" alt="CARLA garage" width="500"/>
   <h3 align="center">
