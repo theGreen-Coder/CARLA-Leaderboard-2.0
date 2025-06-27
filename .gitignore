@@ -1,3 +1,11 @@
+# Custom ignores
+carla/
+/carla
+./carla
+carla/*
+pretrained_models/*
+
+# Default ignores
 /Scenario_Logs/
 /ros-bridge/
 /CARLA_Leaderboard_20/
