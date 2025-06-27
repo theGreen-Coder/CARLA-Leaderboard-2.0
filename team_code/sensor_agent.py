@@ -28,6 +28,7 @@ from filterpy.kalman import UnscentedKalmanFilter as UKF
 from scipy.optimize import fsolve
 
 from scenario_logger import ScenarioLogger
+from CILv2_multiview.network.models._models import CILv2_multiview_attention
 import transfuser_utils as t_u
 
 import pathlib
@@ -133,6 +134,8 @@ class SensorAgent(autonomous_agent.AutonomousAgent):
     # Load model files
     self.nets = []
     self.model_count = 0  # Counts how many models are in our ensemble
+
+    # JC - Here is where it loads the model
     for file in os.listdir(self.config_path):
       if file.endswith('.pth') and file.startswith('model'):
         self.model_count += 1
@@ -150,6 +153,20 @@ class SensorAgent(autonomous_agent.AutonomousAgent):
         if self.config.compile or self.compile:
           net = torch.compile(net, mode=self.config.compile_mode)
 
+        self.nets.append(net)
+
+      if file.endswith('.pth') and file.startswith('CIL'):
+        self.model_count += 1
+        print(os.path.join(self.config_path, file))
+        net = CILv2_multiview_attention(self.config)
+        state_dict = torch.load(os.path.join(self.config_path, file), map_location=self.device)
+        net.load_state_dict(state_dict, strict=True)
+        net.cuda(device=self.device)
+        net.eval()
+
+        if self.config.compile or self.compile:
+          net = torch.compile(net, mode=self.config.compile_mode)
+        
         self.nets.append(net)
 
     self.stuck_detector = 0
