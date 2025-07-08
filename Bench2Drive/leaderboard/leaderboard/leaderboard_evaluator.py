@@ -94,6 +94,8 @@ class LeaderboardEvaluator(object):
     frame_rate = 20.0      # in Hz
 
     def __init__(self, args, statistics_manager):
+        print("INITIALIZE THIS!!!!")
+        os.system("echo INITIALIZE THIS")
         """
         Setup CARLA client and world
         Setup ScenarioManager
@@ -123,7 +125,13 @@ class LeaderboardEvaluator(object):
 
         # Load agent
         module_name = os.path.basename(args.agent).split('.')[0]
+        print("HELLLOOOO!!!")
+        os.system("echo Hello1")
+        print(args.agent)
+        print("HELLLOOOO!!!")
+        os.system("echo Hello2")
         sys.path.insert(0, os.path.dirname(args.agent))
+        print(str(sys.path))
         self.module_agent = importlib.import_module(module_name)
 
         # Create the ScenarioManager
