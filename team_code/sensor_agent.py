@@ -4,6 +4,7 @@ Run it by giving it as the agent option to the
 leaderboard/leaderboard/leaderboard_evaluator.py file
 """
 
+from datetime import datetime
 import os
 from copy import deepcopy
 
@@ -61,6 +62,9 @@ class SensorAgent(autonomous_agent.AutonomousAgent):
 
   def setup(self, path_to_conf_file, route_index=None, traffic_manager=None):
     """Sets up the agent. route_index is for logging purposes"""
+    self.video_id = str(datetime.now().strftime("%m%d%H%M%S"))
+    self.image_iteration = 0
+    
     torch.cuda.empty_cache()
     self.IS_BENCH2DRIVE = strtobool(os.environ.get('IS_BENCH2DRIVE', 'False'))
     print('IS_BENCH2DRIVE: ', self.IS_BENCH2DRIVE)
@@ -408,7 +412,13 @@ class SensorAgent(autonomous_agent.AutonomousAgent):
       self.lon_logger.log_step(route)
 
     return result
-
+  
+  def save_central_image(self, input_data):
+    # TO DO: Change Hard-Coded stuff
+    central = input_data["rgb_front"][1]
+    cv2.imwrite(f'./Bench2Drive/tfpp_b2d_traj/central_{self.video_id}_{self.image_iteration:05d}.jpg', central)
+    self.image_iteration += 1
+  
   @torch.inference_mode()  # Turns off gradient computation
   def run_step(self, input_data, timestamp, sensors=None):  # pylint: disable=locally-disabled, unused-argument
     self.step += 1
@@ -421,6 +431,9 @@ class SensorAgent(autonomous_agent.AutonomousAgent):
       if self.config.backbone not in ('aim'):
         self.lidar_last = deepcopy(tick_data['lidar'])
       return control
+    
+    # Save central camera view to folder
+    self.save_central_image(input_data=input_data)
 
     # Need to run this every step for GPS filtering
     tick_data = self.tick(input_data)
@@ -800,6 +813,12 @@ class SensorAgent(autonomous_agent.AutonomousAgent):
     The leaderboard client doesn't properly clear up the agent after the route finishes so we need to do it here.
     Also writes logging files to disk.
     """
+    print("Printing current folder!")
+    os.system("pwd")
+    print(f"ffmpeg -framerate 30 -i ./Bench2Drive/tfpp_b2d_traj/central_{self.video_id}_%05d.jpg -c:v libx264 -pix_fmt yuv420p ./Bench2Drive/tfpp_b2d_traj/central_{self.video_id}_color_video.mp4")
+    os.system(f"ffmpeg -framerate 30 -i ./Bench2Drive/tfpp_b2d_traj/central_{self.video_id}_%05d.jpg -c:v libx264 -pix_fmt yuv420p ./Bench2Drive/tfpp_b2d_traj/central_{self.video_id}_color_video.mp4")
+    os.system(f"rm ./Bench2Drive/tfpp_b2d_traj/*{self.video_id}*.jpg")
+      
     if self.save_path is not None:
       self.lon_logger.dump_to_json()
       if len(self.nets[0].speed_histogram) > 0:

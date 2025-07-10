@@ -40,13 +40,11 @@ class CILpp_agent(autonomous_agent.AutonomousAgent):
 
     # keep base-class constructor untouched
     def __init__(self, *args, **kwargs):
-        print("THIS ACTUALLY WORKING INIT!")
         self.writer = None
         self.video_id = str(datetime.now().strftime("%m%d%H%M%S"))
         super().__init__(*args, **kwargs)
 
     def setup(self, path_to_conf_file):
-        print("THIS ACTUALLY WORKING SETUP!")
         print(f"PATH to CONFIG: {str(path_to_conf_file)}")
         self.track   = Track.SENSORS
         self.device  = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -56,7 +54,7 @@ class CILpp_agent(autonomous_agent.AutonomousAgent):
         
         ########## LOADING MODEL ##########
         g_conf.immutable(False)
-        merge_with_yaml("/home/yourname/Code/CARLA-Leaderboard-2.0/pretrained_models/CIL/CILv2.yaml", process_type='drive')
+        merge_with_yaml("/home/your-name/Code/CARLA-Leaderboard-2.0/pretrained_models/CIL/CILv2.yaml", process_type='drive')
         # set_type_of_process('drive', root=os.environ["TRAINING_RESULTS_ROOT"])
 
         self._model = Models(g_conf.MODEL_TYPE, g_conf.MODEL_CONFIGURATION)
@@ -64,7 +62,7 @@ class CILpp_agent(autonomous_agent.AutonomousAgent):
         #     print("Using multiple GPUs parallel! ")
         #     print(torch.cuda.device_count(), 'GPUs to be used: ', os.environ["CUDA_VISIBLE_DEVICES"])
         #     self._model = DataParallelWrapper(_model)
-        checkpoint = torch.load("/home/yourname/Code/CARLA-Leaderboard-2.0/pretrained_models/CIL/CIL.pth")
+        checkpoint = torch.load("/home/your-name/Code/CARLA-Leaderboard-2.0/pretrained_models/CIL/CIL.pth")
         # print(self._model.name + '_' + str(checkpoint_number) + '.pth', "loaded from ",
         #         os.path.join(exp_dir, 'checkpoints'))
         # if isinstance(_model, torch.nn.DataParallel):
@@ -78,7 +76,6 @@ class CILpp_agent(autonomous_agent.AutonomousAgent):
 
 
     def sensors(self):
-        # Common pose for all “virtual” sensors
         default_pose = dict(x=0.0, y=0.0, z=2.0,
                             roll=0.0, pitch=0.0, yaw=0.0)
 
@@ -97,7 +94,8 @@ class CILpp_agent(autonomous_agent.AutonomousAgent):
             'type': 'sensor.camera.rgb', 'id': 'rgb_right',
             'width': 300, 'height': 300, 'fov': 60,
             'lens_circle_setting': False},
-
+            
+            # TO DO: Fix GPS problems
             # {**default_pose,
             # 'type': 'sensor.other.gnss', 'id': 'GPS'},
 
@@ -107,6 +105,14 @@ class CILpp_agent(autonomous_agent.AutonomousAgent):
             {**default_pose,
             'type': 'sensor.speedometer', 'id': 'SPEED'},
         ]
+    
+    def save_central_image(self, input_data):
+        # TO DO: Change Hard-Coded stuff
+        central = input_data["rgb_central"][1]          
+        cv2.imwrite(f'./Bench2Drive/CIL_b2d_traj/central_{self.video_id}_{self.image_iteration:05d}.jpg', central)
+        self.image_iteration += 1
+        
+        print(list(input_data.keys()))
 
     def run_step(self, input_data, timestamp):
         print("THIS ACTUALLY WORKING RUN_STEP!")
@@ -114,40 +120,26 @@ class CILpp_agent(autonomous_agent.AutonomousAgent):
         Build your perception + control logic here
         """
         # Record Video to see where we're going!
-        # TO DO: Change Hard-Coded stuff
-        central = input_data["rgb_central"][1]          
-        cv2.imwrite(f'./Bench2Drive/CIL_b2d_traj/central_{self.video_id}_{self.image_iteration:05d}.jpg', central)
-        self.image_iteration += 1
-        
-        print(list(input_data.keys()))
-        # print(input_data)
+        self.save_central_image(input_data=input_data)
         
         # Run inputs through CILv2_multiview_attention
         self.control = carla.VehicleControl()
-        
-        print("Processing images")
         self.norm_rgb = [[self.process_image(input_data[camera_type][1]).unsqueeze(0).to(self.device) for camera_type in ["rgb_central", "rgb_left", "rgb_right"]]]
-
-        print("Processing speed")
         self.norm_speed = [torch.cuda.FloatTensor([self.process_speed(input_data['SPEED'][1]['speed'])]).unsqueeze(0).to(self.device)]
-
-        print("Processing direction")
+        
+        # TO DO: Correct direction to give proper directions
         # self.direction = [torch.cuda.FloatTensor(self.process_command(input_data['GPS'][1], input_data['IMU'][1])[0]).unsqueeze(0).cuda()]
         self.direction = [torch.tensor([0, 0, 0, 1, 0, 0], dtype=torch.float32).unsqueeze(0).to(self.device)]
 
+        # Action outputs
         actions_outputs, _, self.attn_weights = self._model.forward_eval(self.norm_rgb, self.direction, self.norm_speed)
-
         action_outputs = self.process_control_outputs(actions_outputs.detach().cpu().numpy().squeeze())
-
+        
         self.steer, self.throttle, self.brake = action_outputs
         self.control.steer = float(self.steer)
         self.control.throttle = float(self.throttle)
         self.control.brake = float(self.brake)
         self.control.hand_brake = False
-        
-        # self.control.throttle = 1
-        # self.control.brake    = 0.0
-        # self.control.steer    = 0.0
         
         return self.control
     
@@ -194,4 +186,4 @@ class CILpp_agent(autonomous_agent.AutonomousAgent):
         os.system("pwd")
         print(f"ffmpeg -framerate 30 -i ./Bench2Drive/CIL_b2d_traj/central_{self.video_id}_%05d.jpg -c:v libx264 -pix_fmt yuv420p ./Bench2Drive/CIL_b2d_traj/central_{self.video_id}_color_video.mp4")
         os.system(f"ffmpeg -framerate 30 -i ./Bench2Drive/CIL_b2d_traj/central_{self.video_id}_%05d.jpg -c:v libx264 -pix_fmt yuv420p ./Bench2Drive/CIL_b2d_traj/central_{self.video_id}_color_video.mp4")
-        os.system(f"rm ./Bench2Drive/CIL_b2d_traj/*.jpg")
+        os.system(f"rm ./Bench2Drive/CIL_b2d_traj/*{self.video_id}*.jpg")
