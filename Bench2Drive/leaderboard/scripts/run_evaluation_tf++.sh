@@ -17,11 +17,11 @@
 #export PYTHONPATH="${CARLA_ROOT}/PythonAPI/carla/":"${SCENARIO_RUNNER_ROOT}":"${LEADERBOARD_ROOT}":${PYTHONPATH}
 
 # JS WORK_DIR is different from that in exports.sh so we better set all the exports here
-export CARLA_ROOT=/your-path-to-the-code/CARLA-Leaderboard-2.0/carla
-export WORK_DIR=/your-path-to-the-code/CARLA-Leaderboard-2.0/Bench2Drive
+export CARLA_ROOT=/home/your-name/Code/CARLA-Leaderboard-2.0/carla
+export WORK_DIR=/home/your-name/Code/CARLA-Leaderboard-2.0/Bench2Drive
 export SCENARIO_RUNNER_ROOT=${WORK_DIR}/scenario_runner
 export LEADERBOARD_ROOT=${WORK_DIR}/leaderboard
-export PYTHONPATH=$PYTHONPATH:/your-path-to-the-code/CARLA-Leaderboard-2.0/team_code
+export PYTHONPATH=$PYTHONPATH:/home/your-name/Code/CARLA-Leaderboard-2.0/team_code
 export PYTHONPATH="${CARLA_ROOT}/PythonAPI/carla/":"${SCENARIO_RUNNER_ROOT}":"${LEADERBOARD_ROOT}":${PYTHONPATH}
 export LD_LIBRARY_PATH="$CONDA_PREFIX/lib"  # JS this one was missing
 
@@ -32,9 +32,9 @@ IS_BENCH2DRIVE=True
 BASE_ROUTES=${WORK_DIR}/leaderboard/data/bench2drive220
 #TEAM_AGENT=/mnt/lustre/work/geiger/bjaeger25/garage_2_cleanup/team_code/sensor_agent.py
 # Must set YOUR_CKPT_PATH
-TEAM_AGENT=${WORK_DIR}/team_code/sensor_agent.py
+TEAM_AGENT=/home/your-name/Code/CARLA-Leaderboard-2.0/team_code/sensor_agent.py
 #TEAM_CONFIG=/mnt/lustre/work/geiger/bjaeger25/garage_2_cleanup/team_code/checkpoints/tfpp_009_ensemble_0_1_2
-GARAGE_ROOT=/your-path-to-the-code/CARLA-Leaderboard-2.0  # JS this is not the same as WORK_DIR
+GARAGE_ROOT=/home/your-name/Code/CARLA-Leaderboard-2.0  # JS this is not the same as WORK_DIR
 TEAM_CONFIG=$GARAGE_ROOT/pretrained_models/all_towns  # all_towns, town13_withheld
 BASE_CHECKPOINT_ENDPOINT=eval_bench2drive220
 PLANNER_TYPE=traj
@@ -65,7 +65,7 @@ echo -e "**************\033[36m Please Manually adjust GPU or TASK_ID \033[0m **
 # Example, 8*H100, 1 task per gpu
 #GPU_RANK_LIST=(0 1 2 3 4 5 6 7)
 #TASK_LIST=(0 1 2 3 4 5 6 7)
-GPU_RANK_LIST=(0)
+GPU_RANK_LIST=(4)
 TASK_LIST=(0)
 echo -e "\033[32m GPU_RANK_LIST: $GPU_RANK_LIST \033[0m"
 echo -e "\033[32m TASK_LIST: $TASK_LIST \033[0m"
@@ -88,7 +88,8 @@ for ((i=0; i<$length; i++ )); do
       echo -e "\033[32m GPU_RANK: $GPU_RANK \033[0m"
       echo -e "\033[32m bash ${WORK_DIR}/leaderboard/scripts/run_evaluation.sh $PORT $TM_PORT $IS_BENCH2DRIVE $ROUTES $TEAM_AGENT $TEAM_CONFIG $CHECKPOINT_ENDPOINT $SAVE_PATH $PLANNER_TYPE $GPU_RANK \033[0m"
       echo -e "***********************************************************************************"
-      bash -e ${WORK_DIR}/leaderboard/scripts/run_evaluation.sh $PORT $TM_PORT $IS_BENCH2DRIVE $ROUTES $TEAM_AGENT $TEAM_CONFIG $CHECKPOINT_ENDPOINT $SAVE_PATH $PLANNER_TYPE $GPU_RANK 2>&1 > ${BASE_ROUTES}_${TASK_LIST[$i]}_${ALGO}_${PLANNER_TYPE}.log &
+    #   bash -e ${WORK_DIR}/leaderboard/scripts/run_evaluation.sh $PORT $TM_PORT $IS_BENCH2DRIVE $ROUTES $TEAM_AGENT $TEAM_CONFIG $CHECKPOINT_ENDPOINT $SAVE_PATH $PLANNER_TYPE $GPU_RANK 2>&1 > ${BASE_ROUTES}_${TASK_LIST[$i]}_${ALGO}_${PLANNER_TYPE}.log
+      bash -e ${WORK_DIR}/leaderboard/scripts/run_evaluation.sh $PORT $TM_PORT $IS_BENCH2DRIVE $ROUTES $TEAM_AGENT $TEAM_CONFIG $CHECKPOINT_ENDPOINT $SAVE_PATH $PLANNER_TYPE $GPU_RANK 
       sleep 5
 done
 wait

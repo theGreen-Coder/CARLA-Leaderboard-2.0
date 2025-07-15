@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
 from datetime import datetime
+from enum import Enum
 import math
 import os
 
 import cv2
+# from Bench2Drive.scenario_runner.srunner.scenariomanager.carla_data_provider import CarlaDataProvider
 from leaderboard.autoagents import autonomous_agent
 from leaderboard.autoagents.autonomous_agent import Track
 
@@ -22,6 +24,8 @@ import json
 import pickle
 from importlib import import_module
 
+from srunner.scenariomanager.carla_data_provider import CarlaDataProvider  # pylint: disable=locally-disabled, import-outside-toplevel
+from team_code_CIL.CILv2_multiview.run_CARLA_driving.driving.utils.waypointer import Waypointer
 
 def get_entry_point():
     return 'CILpp_agent'
@@ -32,6 +36,18 @@ def checkpoint_parse_configuration_file(filename):
 
     return configuration_dict['yaml'], configuration_dict['checkpoint'], \
            configuration_dict['agent_name']
+           
+class RoadOption(Enum):
+    """
+    RoadOption represents the possible topological configurations when moving from a segment of lane to other.
+    """
+    VOID = -1
+    LEFT = 1
+    RIGHT = 2
+    STRAIGHT = 3
+    LANEFOLLOW = 4
+    CHANGELANELEFT = 5
+    CHANGELANERIGHT = 6
 
 class CILpp_agent(autonomous_agent.AutonomousAgent):
     """
@@ -43,6 +59,7 @@ class CILpp_agent(autonomous_agent.AutonomousAgent):
         self.writer = None
         self.video_id = str(datetime.now().strftime("%m%d%H%M%S"))
         super().__init__(*args, **kwargs)
+        self.client = CarlaDataProvider.get_client()
 
     def setup(self, path_to_conf_file):
         print(f"PATH to CONFIG: {str(path_to_conf_file)}")
@@ -73,8 +90,7 @@ class CILpp_agent(autonomous_agent.AutonomousAgent):
         self._model.eval()
         
         self._model = self._model.to(self.device)
-
-
+        
     def sensors(self):
         default_pose = dict(x=0.0, y=0.0, z=2.0,
                             roll=0.0, pitch=0.0, yaw=0.0)
@@ -96,8 +112,8 @@ class CILpp_agent(autonomous_agent.AutonomousAgent):
             'lens_circle_setting': False},
             
             # TO DO: Fix GPS problems
-            # {**default_pose,
-            # 'type': 'sensor.other.gnss', 'id': 'GPS'},
+            {**default_pose,
+            'type': 'sensor.other.gnss', 'id': 'GPS'},
 
             {**default_pose,
             'type': 'sensor.other.imu', 'id': 'IMU'},
@@ -115,6 +131,11 @@ class CILpp_agent(autonomous_agent.AutonomousAgent):
         print(list(input_data.keys()))
 
     def run_step(self, input_data, timestamp):
+        if not hasattr(self, 'waypointer'):
+            world = CarlaDataProvider.get_world()            
+            self.waypointer = Waypointer(world, self._global_plan_gps, self._global_plan_world_coord)
+            print("Waypointer initialized.")
+        
         print("THIS ACTUALLY WORKING RUN_STEP!")
         """
         Build your perception + control logic here
@@ -128,8 +149,9 @@ class CILpp_agent(autonomous_agent.AutonomousAgent):
         self.norm_speed = [torch.cuda.FloatTensor([self.process_speed(input_data['SPEED'][1]['speed'])]).unsqueeze(0).to(self.device)]
         
         # TO DO: Correct direction to give proper directions
-        # self.direction = [torch.cuda.FloatTensor(self.process_command(input_data['GPS'][1], input_data['IMU'][1])[0]).unsqueeze(0).cuda()]
-        self.direction = [torch.tensor([0, 0, 0, 1, 0, 0], dtype=torch.float32).unsqueeze(0).to(self.device)]
+        self.direction = [torch.cuda.FloatTensor(self.process_command(input_data['GPS'][1], input_data['IMU'][1])[0]).unsqueeze(0).cuda()]
+        print(f"Direction {str(self.direction)}")
+        # self.direction = [torch.tensor([0, 0, 0, 1, 0, 0], dtype=torch.float32).unsqueeze(0).to(self.device)]
 
         # Action outputs
         actions_outputs, _, self.attn_weights = self._model.forward_eval(self.norm_rgb, self.direction, self.norm_speed)
@@ -187,3 +209,8 @@ class CILpp_agent(autonomous_agent.AutonomousAgent):
         print(f"ffmpeg -framerate 30 -i ./Bench2Drive/CIL_b2d_traj/central_{self.video_id}_%05d.jpg -c:v libx264 -pix_fmt yuv420p ./Bench2Drive/CIL_b2d_traj/central_{self.video_id}_color_video.mp4")
         os.system(f"ffmpeg -framerate 30 -i ./Bench2Drive/CIL_b2d_traj/central_{self.video_id}_%05d.jpg -c:v libx264 -pix_fmt yuv420p ./Bench2Drive/CIL_b2d_traj/central_{self.video_id}_color_video.mp4")
         os.system(f"rm ./Bench2Drive/CIL_b2d_traj/*{self.video_id}*.jpg")
+        
+    def set_global_plan(self, global_plan_gps, global_plan_world_coord):
+        super().set_global_plan(global_plan_gps, global_plan_world_coord)
+        self._global_plan_gps = global_plan_gps
+        self._global_plan_world_coord = global_plan_world_coord

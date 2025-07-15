@@ -1,7 +1,7 @@
 #!/bin/bash
 # Must set CARLA_ROOT
-export CARLA_ROOT=/your-path-to-the-code/CARLA-Leaderboard-2.0/carla
-export WORK_DIR=/your-path-to-the-code/CARLA-Leaderboard-2.0/Bench2Drive
+export CARLA_ROOT=/home/your-name/Code/CARLA-Leaderboard-2.0/carla
+export WORK_DIR=/home/your-name/Code/CARLA-Leaderboard-2.0/Bench2Drive
 
 export CARLA_SERVER=${CARLA_ROOT}/CarlaUE4.sh  # JS not used anywhere ??
 export PYTHONPATH=$PYTHONPATH:${CARLA_ROOT}/PythonAPI/carla
