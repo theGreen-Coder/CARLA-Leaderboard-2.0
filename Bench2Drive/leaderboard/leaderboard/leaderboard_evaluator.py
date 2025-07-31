@@ -19,6 +19,9 @@ from argparse import RawTextHelpFormatter
 # from distutils.version import LooseVersion
 import importlib
 import os
+import logging
+log_level = os.getenv("LOG_LEVEL", "WARNING").upper()
+logging.basicConfig(level=getattr(logging, log_level, logging.WARNING))
 
 # import pkg_resources
 import sys
@@ -124,14 +127,9 @@ class LeaderboardEvaluator(object):
         #         raise ImportError("CARLA version 0.9.10.1 or newer required. CARLA version found: {}".format(dist))
 
         # Load agent
+        logging.info("Loading agent in leaderboard_evalutor!")
         module_name = os.path.basename(args.agent).split('.')[0]
-        print("HELLLOOOO!!!")
-        os.system("echo Hello1")
-        print(args.agent)
-        print("HELLLOOOO!!!")
-        os.system("echo Hello2")
         sys.path.insert(0, os.path.dirname(args.agent))
-        print(str(sys.path))
         self.module_agent = importlib.import_module(module_name)
 
         # Create the ScenarioManager
@@ -218,7 +216,7 @@ class LeaderboardEvaluator(object):
         self.server = subprocess.Popen(cmd1, shell=True, preexec_fn=os.setsid)
         print(cmd1, self.server.returncode, flush=True)
         atexit.register(os.killpg, self.server.pid, signal.SIGKILL)
-        time.sleep(60)
+        time.sleep(80)
             
         attempts = 0
         num_max_restarts = 20
@@ -493,6 +491,7 @@ class LeaderboardEvaluator(object):
             # Save the progress and write the route statistics
             self.statistics_manager.save_progress(route_indexer.index, route_indexer.total)
             self.statistics_manager.write_statistics()
+            
             if crashed:
                 print(f'{route_indexer.index} crash, [{route_indexer.index}/{route_indexer.total}], please restart', flush=True)
                 break
@@ -562,17 +561,34 @@ def main():
                         help="Path to checkpoint used for saving live results")
     parser.add_argument("--gpu-rank", type=int, default=0)
     arguments = parser.parse_args()
+    
+    MAX_RETRIES = 3
+    
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            statistics_manager = StatisticsManager(arguments.checkpoint,
+                                                   arguments.debug_checkpoint)
+            leaderboard = LeaderboardEvaluator(arguments, statistics_manager)
+            crashed = leaderboard.run(arguments)
+            
+        except Exception as exc:
+            crashed = True
+            print(f"[Attempt {attempt+1}] unhandled exception: {exc}", file=sys.stderr)
 
-    statistics_manager = StatisticsManager(arguments.checkpoint, arguments.debug_checkpoint)
-    leaderboard_evaluator = LeaderboardEvaluator(arguments, statistics_manager)
-    crashed = leaderboard_evaluator.run(arguments)
+        finally:
+            try:
+                del leaderboard
+            except NameError:
+                pass
 
-    del leaderboard_evaluator
-
-    if crashed:
-        sys.exit(-1)
-    else:
-        sys.exit(0)
+        if not crashed:
+            sys.exit(0)
+        
+        if attempt < MAX_RETRIES:
+            print(f"[Attempt {attempt+1}/{MAX_RETRIES+1}] crashed; retrying…", file=sys.stderr)
+            time.sleep(5)
+        else:
+            print("[All attempts exhausted] giving up.", file=sys.stderr)
 
 if __name__ == '__main__':
     main()

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Must set CARLA_ROOT
-export CARLA_ROOT=/home/your-name/Code/CARLA-Leaderboard-2.0/carla
-export WORK_DIR=/home/your-name/Code/CARLA-Leaderboard-2.0/Bench2Drive
+export CARLA_ROOT=/home/your-home/Code/CARLA-Leaderboard-2.0/carla
+export WORK_DIR=/home/your-home/Code/CARLA-Leaderboard-2.0/Bench2Drive
 
 export CARLA_SERVER=${CARLA_ROOT}/CarlaUE4.sh  # JS not used anywhere ??
 export PYTHONPATH=$PYTHONPATH:${CARLA_ROOT}/PythonAPI/carla
@@ -52,4 +52,36 @@ CUDA_VISIBLE_DEVICES=${GPU_RANK} python "${LEADERBOARD_ROOT}"/leaderboard/leader
   --resume=${RESUME} \
   --port="${PORT}" \
   --traffic-manager-port="${TM_PORT}" \
-  --gpu-rank="${GPU_RANK}" \
+  --gpu-rank="${GPU_RANK}" &
+
+# RED=$'\e[0;31m'
+# NC=$'\e[0m'
+
+# PYTHON_RETURN=1
+# until [ $PYTHON_RETURN -eq 0 ]; do
+#   CUDA_VISIBLE_DEVICES=${GPU_RANK} python "${LEADERBOARD_ROOT}"/leaderboard/leaderboard_evaluator.py \
+#     --routes="${ROUTES}" \
+#     --repetitions=${REPETITIONS} \
+#     --track=${CHALLENGE_TRACK_CODENAME} \
+#     --checkpoint="${CHECKPOINT_ENDPOINT}" \
+#     --agent="${TEAM_AGENT}" \
+#     --agent-config="${TEAM_CONFIG}" \
+#     --debug=${DEBUG_CHALLENGE} \
+#     --record="${RECORD_PATH}" \
+#     --resume=${RESUME} \
+#     --port="${PORT}" \
+#     --traffic-manager-port="${TM_PORT}" \
+#     --gpu-rank="${GPU_RANK}" \
+  
+#   PYTHON_RETURN=$?
+#   if [ $PYTHON_RETURN -ne 0 ]; then
+#     if [ $PYTHON_RETURN -eq 139 ]; then
+#       echo "${RED}Segmentation fault (exit code 139) detected. Restarting...${NC}" >&2
+#     else
+#       echo "${RED}Non-zero exit: PYTHON_RETURN=${PYTHON_RETURN}. Retrying...${NC}" >&2
+#     fi
+#     sleep 2
+#   fi
+# done
+
+# echo -e "\033[32m Evaluation script completed successfully. \033[0m"

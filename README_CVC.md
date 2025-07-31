@@ -74,8 +74,22 @@ As explained above, the evaluation is performed on a total of 220 short routes, 
 - [`scenario_runner`](./Bench2Drive/scenario_runner/) is CARLA’s companion module that defines traffic scenarios (via a Python API or the OpenSCENARIO standard) and drives the simulator through them so you can test, train, or benchmark an autonomous‑driving agent. It ships with ready‑made scenarios, an execution engine, metrics collection and helper scripts (e.g., no‑rendering mode, manual control).
 - To see the terminal output of the benchmark run this command `cat ${BASE_ROUTES}_${TASK_LIST[$i]}_${ALGO}_${PLANNER_TYPE}.log`, it's this file over [here](./Bench2Drive/leaderboard/data/bench2drive220_0_tfpp_traj.log).<br>
 
+#### Where do I find the results of the evaluation?
+For the Bench2Drive the folder with the evaluation results should be called `tfpp_b2d_traj`. If you change the `traj `algorithm in the `run_evaluation_tf++.sh` this might be different. In the `tfpp_b2d_traj` folder you will find a JSON with all the evaluation results as well as all the generated videos for each of the routes of Bench2Drive.
 
-<span style="color:red">TODO</span> explicar l'output que s'obte d'una avaluacio: que i on és
+If the evaluation has finished, the evaluation results given by CARLA will be shown at the end of the file. Otherwise, something like the following will be shown (indicating that the evaulation is still in progress):
+
+
+    "progress": [
+            61,
+            220
+        ],
 
 ## Evaluating CIL++ on Bench2Drive
+To evaluate CIL++ on Bench2Drive the pretrained weights of the original CIL++ should be donwload and stored in `pretrained_models/CIL/CIL.pth`. In addtion, a `pretrained_models/CIL/CILv2.yaml` file should also be included with the necessary config specifications to properly load the model.
+
+In order to evaluate CIL++ on Bench2Drive a new file `team_code_CIL/CILv2_agent.py` was created. This file establishes a CIL agent so it can be loaded by CARLA and evaluated. The code is pretty straight-forward and it is easy to see what the agent is doing, but I will provide a brief summary of what it's doing:
+- Defines a `def get_entry_point():` required by CARLA to setup an agent and creates a `class CILpp_agent` which inherits from `autonomous_agent.AutonomousAgent`
+- The `setup` method loads the desired  
+
 <span style="color:red">TODO</span> explicar el nou codi CIL++ per tal de poder evaluar al B2D, o sigui, en el marc del leaderboard 2.

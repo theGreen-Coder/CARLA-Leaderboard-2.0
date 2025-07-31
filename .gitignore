@@ -4,6 +4,11 @@ carla/
 ./carla
 carla/*
 pretrained_models/*
+!pretrained_models/**/
+!pretrained_models/**/*.*
+pretrained_models/**/*.pth
+**/*.jpg
+**/*.mp4
 
 # Default ignores
 /Scenario_Logs/

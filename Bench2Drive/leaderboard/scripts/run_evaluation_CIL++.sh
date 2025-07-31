@@ -9,51 +9,38 @@
 #SBATCH --error=/mnt/lustre/work/geiger/bjaeger25/garage_2_cleanup/results/logs/b2d_009_%a_%A.err   # File to which STDERR will be written
 #SBATCH --partition=2080-galvani
 
-#export CARLA_ROOT=/mnt/lustre/work/geiger/bjaeger25/CARLA_0_9_15
-#export WORK_DIR=/mnt/lustre/work/geiger/bjaeger25/garage_2_cleanup/Bench2Drive
-#export SCENARIO_RUNNER_ROOT=${WORK_DIR}/scenario_runner
-#export LEADERBOARD_ROOT=${WORK_DIR}/leaderboard
-#export PYTHONPATH=$PYTHONPATH:/mnt/lustre/work/geiger/bjaeger25/garage_2_cleanup/team_code
-#export PYTHONPATH="${CARLA_ROOT}/PythonAPI/carla/":"${SCENARIO_RUNNER_ROOT}":"${LEADERBOARD_ROOT}":${PYTHONPATH}
-
-# JS WORK_DIR is different from that in exports.sh so we better set all the exports here
-export CARLA_ROOT=/home/your-name/Code/CARLA-Leaderboard-2.0/carla
-export WORK_DIR=/home/your-name/Code/CARLA-Leaderboard-2.0/Bench2Drive
+############### PATH EXPORTS ###############
+export CARLA_ROOT=/home/your-home/Code/CARLA-Leaderboard-2.0/carla
+export WORK_DIR=/home/your-home/Code/CARLA-Leaderboard-2.0/Bench2Drive
 export SCENARIO_RUNNER_ROOT=${WORK_DIR}/scenario_runner
 export LEADERBOARD_ROOT=${WORK_DIR}/leaderboard
-export PYTHONPATH=$PYTHONPATH:/home/your-name/Code/CARLA-Leaderboard-2.0/team_code_CIL
+export PYTHONPATH=$PYTHONPATH:/home/your-home/Code/CARLA-Leaderboard-2.0/team_code_CIL
 export PYTHONPATH="${CARLA_ROOT}/PythonAPI/carla/":"${SCENARIO_RUNNER_ROOT}":"${LEADERBOARD_ROOT}":${PYTHONPATH}
 export LD_LIBRARY_PATH="$CONDA_PREFIX/lib"  # JS this one was missing
 
-#!/bin/bash
+######## CHANGE BASED ON PREFERENCE ########
+export LOG_LEVEL=DEBUG                              # Set to your desired level of logging
+GPU_RANK_LIST=(0 2 3 4 5 6)                         # Example, 8*H100, 1 task per gpu: GPU_RANK_LIST=(0 1 2 3 4 5 6 7), 
+TASK_LIST=(0 1 2 3 4 5)                             # TASK_LIST=(0 1 2 3 4 5 6 7)
+TASK_NUM=6                                          # Set to number of items in TASK_LIST
+
+################# DEFAULTS #################
 BASE_PORT=30000
 BASE_TM_PORT=50000
 IS_BENCH2DRIVE=True
 BASE_ROUTES=${WORK_DIR}/leaderboard/data/bench2drive220
-#TEAM_AGENT=/mnt/lustre/work/geiger/bjaeger25/garage_2_cleanup/team_code/sensor_agent.py
-# Must set YOUR_CKPT_PATH
-TEAM_AGENT=/home/your-name/Code/CARLA-Leaderboard-2.0/team_code_CIL/CILv2_agent_new.py
-#TEAM_CONFIG=/mnt/lustre/work/geiger/bjaeger25/garage_2_cleanup/team_code/checkpoints/tfpp_009_ensemble_0_1_2
-GARAGE_ROOT=/home/your-name/Code/CARLA-Leaderboard-2.0  # JS this is not the same as WORK_DIR
-TEAM_CONFIG=$GARAGE_ROOT/pretrained_models/CIL++_12346  # CIL++_12346 or CIL++_1
+TEAM_AGENT=/home/your-home/Code/CARLA-Leaderboard-2.0/team_code_CIL/CILv2_agent.py
+GARAGE_ROOT=/home/your-home/Code/CARLA-Leaderboard-2.0
+TEAM_CONFIG=$GARAGE_ROOT/pretrained_models/CIL
 BASE_CHECKPOINT_ENDPOINT=eval_bench2drive220
 PLANNER_TYPE=traj
 ALGO=CIL
 SAVE_PATH=${WORK_DIR}/leaderboard/data/eval_bench2drive220_${ALGO}_${PLANNER_TYPE}
 
-if [ ! -d "${ALGO}_b2d_${PLANNER_TYPE}" ]; then
-    mkdir ${ALGO}_b2d_${PLANNER_TYPE}
-    echo -e "\033[32m Directory ${ALGO}_b2d_${PLANNER_TYPE} created. \033[0m"  # JS \033[32m prints green text, \033[0m black again
-else
-    echo -e "\033[32m Directory ${ALGO}_b2d_${PLANNER_TYPE} already exists. \033[0m"
-fi
-
 # Check if the split_xml script needs to be executed
 if [ ! -f "${BASE_ROUTES}_${ALGO}_${PLANNER_TYPE}_split_done.flag" ]; then
     echo -e "****************************\033[33m Attention \033[0m ****************************"
-    echo -e "\033[33m Running split_xml.py \033[0m"
-    #TASK_NUM=8 # 8*H100, 1 task per gpu
-    TASK_NUM=1
+    echo -e "\033[33m Running split_xml.py \033[0m"    
     python ${WORK_DIR}/tools/split_xml.py $BASE_ROUTES $TASK_NUM $ALGO $PLANNER_TYPE
     touch "${BASE_ROUTES}_${ALGO}_${PLANNER_TYPE}_split_done.flag"
     echo -e "\033[32m Splitting complete. Flag file created. \033[0m"
@@ -62,11 +49,6 @@ else
 fi
 
 echo -e "**************\033[36m Please Manually adjust GPU or TASK_ID \033[0m **************"
-# Example, 8*H100, 1 task per gpu
-#GPU_RANK_LIST=(0 1 2 3 4 5 6 7)
-#TASK_LIST=(0 1 2 3 4 5 6 7)
-GPU_RANK_LIST=(3)
-TASK_LIST=(0)
 echo -e "\033[32m GPU_RANK_LIST: $GPU_RANK_LIST \033[0m"
 echo -e "\033[32m TASK_LIST: $TASK_LIST \033[0m"
 echo -e "***********************************************************************************"
@@ -88,9 +70,9 @@ for ((i=0; i<$length; i++ )); do
       echo -e "\033[32m GPU_RANK: $GPU_RANK \033[0m"
       echo -e "\033[32m bash ${WORK_DIR}/leaderboard/scripts/run_evaluation.sh $PORT $TM_PORT $IS_BENCH2DRIVE $ROUTES $TEAM_AGENT $TEAM_CONFIG $CHECKPOINT_ENDPOINT $SAVE_PATH $PLANNER_TYPE $GPU_RANK \033[0m"
       echo -e "***********************************************************************************"
-      bash -e ${WORK_DIR}/leaderboard/scripts/run_evaluation.sh $PORT $TM_PORT $IS_BENCH2DRIVE $ROUTES $TEAM_AGENT $TEAM_CONFIG $CHECKPOINT_ENDPOINT $SAVE_PATH $PLANNER_TYPE $GPU_RANK
+      bash -e ${WORK_DIR}/leaderboard/scripts/run_evaluation.sh $PORT $TM_PORT $IS_BENCH2DRIVE $ROUTES $TEAM_AGENT $TEAM_CONFIG $CHECKPOINT_ENDPOINT $SAVE_PATH $PLANNER_TYPE $GPU_RANK 2>&1 > ${BASE_ROUTES}_${TASK_LIST[$i]}_${ALGO}_${PLANNER_TYPE}.log &
       sleep 5
 done
 wait
 
-# JS do cat ${BASE_ROUTES}_${TASK_LIST[$i]}_${ALGO}_${PLANNER_TYPE}.log if it fails
+echo "Bash script done."

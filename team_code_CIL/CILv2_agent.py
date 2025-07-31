@@ -22,6 +22,7 @@ from CILv2_multiview.dataloaders.transforms import encode_directions_4, encode_d
 import numpy as np
 import json
 import pickle
+import logging
 from importlib import import_module
 
 from srunner.scenariomanager.carla_data_provider import CarlaDataProvider  # pylint: disable=locally-disabled, import-outside-toplevel
@@ -36,18 +37,9 @@ def checkpoint_parse_configuration_file(filename):
 
     return configuration_dict['yaml'], configuration_dict['checkpoint'], \
            configuration_dict['agent_name']
-           
-class RoadOption(Enum):
-    """
-    RoadOption represents the possible topological configurations when moving from a segment of lane to other.
-    """
-    VOID = -1
-    LEFT = 1
-    RIGHT = 2
-    STRAIGHT = 3
-    LANEFOLLOW = 4
-    CHANGELANELEFT = 5
-    CHANGELANERIGHT = 6
+
+def strtobool(v):
+  return str(v).lower() in ('yes', 'y', 'true', 't', '1', 'True')
 
 class CILpp_agent(autonomous_agent.AutonomousAgent):
     """
@@ -56,36 +48,43 @@ class CILpp_agent(autonomous_agent.AutonomousAgent):
 
     # keep base-class constructor untouched
     def __init__(self, *args, **kwargs):
+        log_level = os.getenv("LOG_LEVEL", "WARNING").upper()
+        logging.basicConfig(level=getattr(logging, log_level, logging.WARNING))
+        
         self.writer = None
         self.video_id = str(datetime.now().strftime("%m%d%H%M%S"))
         super().__init__(*args, **kwargs)
         self.client = CarlaDataProvider.get_client()
+        
 
     def setup(self, path_to_conf_file):
-        print(f"PATH to CONFIG: {str(path_to_conf_file)}")
+        logging.debug(f"PATH to CONFIG: {str(path_to_conf_file)}")
         self.track   = Track.SENSORS
         self.device  = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         torch.cuda.empty_cache()
         self.initialized = False
         self.image_iteration = 0
         
+        # This strage initialization was borrowed form the sensor_agent.py
+        self.IS_BENCH2DRIVE = strtobool(os.environ.get('IS_BENCH2DRIVE', 'False'))
+        if self.IS_BENCH2DRIVE:
+            self.config_path = path_to_conf_file.split('+')[0]
+        else:
+            self.config_path = path_to_conf_file
+        
+        self.model_name = self.config_path.split("/")[-1]
+        
         ########## LOADING MODEL ##########
         g_conf.immutable(False)
-        merge_with_yaml("/home/your-name/Code/CARLA-Leaderboard-2.0/pretrained_models/CIL/CILv2.yaml", process_type='drive')
-        # set_type_of_process('drive', root=os.environ["TRAINING_RESULTS_ROOT"])
+        
+        # Read Checkpoint and yaml config file
+        merge_with_yaml(os.path.join(self.config_path, 'config.yaml'), process_type='drive')
+        checkpoint = torch.load(os.path.join(self.config_path, 'checkpoint.pth'))
 
+        # Load Model
         self._model = Models(g_conf.MODEL_TYPE, g_conf.MODEL_CONFIGURATION)
-        # if torch.cuda.device_count() > 1 and g_conf.DATA_PARALLEL:
-        #     print("Using multiple GPUs parallel! ")
-        #     print(torch.cuda.device_count(), 'GPUs to be used: ', os.environ["CUDA_VISIBLE_DEVICES"])
-        #     self._model = DataParallelWrapper(_model)
-        checkpoint = torch.load("/home/your-name/Code/CARLA-Leaderboard-2.0/pretrained_models/CIL/CIL.pth")
-        # print(self._model.name + '_' + str(checkpoint_number) + '.pth', "loaded from ",
-        #         os.path.join(exp_dir, 'checkpoints'))
-        # if isinstance(_model, torch.nn.DataParallel):
-        #     self._model.module.load_state_dict(checkpoint['model'])
-        # else:
         self._model.load_state_dict(checkpoint['model'])
+        
         self._model.cuda()
         self._model.eval()
         
@@ -110,8 +109,7 @@ class CILpp_agent(autonomous_agent.AutonomousAgent):
             'type': 'sensor.camera.rgb', 'id': 'rgb_right',
             'width': 300, 'height': 300, 'fov': 60,
             'lens_circle_setting': False},
-            
-            # TO DO: Fix GPS problems
+
             {**default_pose,
             'type': 'sensor.other.gnss', 'id': 'GPS'},
 
@@ -121,26 +119,16 @@ class CILpp_agent(autonomous_agent.AutonomousAgent):
             {**default_pose,
             'type': 'sensor.speedometer', 'id': 'SPEED'},
         ]
-    
-    def save_central_image(self, input_data):
-        # TO DO: Change Hard-Coded stuff
-        central = input_data["rgb_central"][1]          
-        cv2.imwrite(f'./Bench2Drive/CIL_b2d_traj/central_{self.video_id}_{self.image_iteration:05d}.jpg', central)
-        self.image_iteration += 1
-        
-        print(list(input_data.keys()))
 
     def run_step(self, input_data, timestamp):
         if not hasattr(self, 'waypointer'):
             world = CarlaDataProvider.get_world()            
             self.waypointer = Waypointer(world, self._global_plan_gps, self._global_plan_world_coord)
-            print("Waypointer initialized.")
+            logging.info("Waypointer initialized!")
         
-        print("THIS ACTUALLY WORKING RUN_STEP!")
-        """
-        Build your perception + control logic here
-        """
-        # Record Video to see where we're going!
+        logging.debug("Starting Run_Step!")
+        
+        # Record Video to see where ego vehicle is going!
         self.save_central_image(input_data=input_data)
         
         # Run inputs through CILv2_multiview_attention
@@ -148,10 +136,9 @@ class CILpp_agent(autonomous_agent.AutonomousAgent):
         self.norm_rgb = [[self.process_image(input_data[camera_type][1]).unsqueeze(0).to(self.device) for camera_type in ["rgb_central", "rgb_left", "rgb_right"]]]
         self.norm_speed = [torch.cuda.FloatTensor([self.process_speed(input_data['SPEED'][1]['speed'])]).unsqueeze(0).to(self.device)]
         
-        # TO DO: Correct direction to give proper directions
+        # Convert GPS coordenates to directions 
         self.direction = [torch.cuda.FloatTensor(self.process_command(input_data['GPS'][1], input_data['IMU'][1])[0]).unsqueeze(0).cuda()]
-        print(f"Direction {str(self.direction)}")
-        # self.direction = [torch.tensor([0, 0, 0, 1, 0, 0], dtype=torch.float32).unsqueeze(0).to(self.device)]
+        logging.debug(f"Direction {str(self.direction)}")
 
         # Action outputs
         actions_outputs, _, self.attn_weights = self._model.forward_eval(self.norm_rgb, self.direction, self.norm_speed)
@@ -162,6 +149,9 @@ class CILpp_agent(autonomous_agent.AutonomousAgent):
         self.control.throttle = float(self.throttle)
         self.control.brake = float(self.brake)
         self.control.hand_brake = False
+        
+        logging.debug("Control/Action outputs:")
+        logging.debug(self.control)
         
         return self.control
     
@@ -202,15 +192,33 @@ class CILpp_agent(autonomous_agent.AutonomousAgent):
         elif g_conf.DATA_COMMAND_CLASS_NUM == 6:
             _, _, cmd = self.waypointer.tick_lb(gps, imu)
             return encode_directions_6(cmd.value), cmd.value
+    
+    def save_central_image(self, input_data):
+        # TO DO: Change Hard-Coded stuff
+        central = input_data["rgb_central"][1]          
+        cv2.imwrite(f'./Bench2Drive/videos/central_{self.model_name}_{self.video_id}_{self.image_iteration:05d}.jpg', central)
+        self.image_iteration += 1
+        
+        logging.debug(f'Input data keys() list: {list(input_data.keys())}')
 
     def destroy(self, results=None):
-        print("Printing current folder!")
-        os.system("pwd")
-        print(f"ffmpeg -framerate 30 -i ./Bench2Drive/CIL_b2d_traj/central_{self.video_id}_%05d.jpg -c:v libx264 -pix_fmt yuv420p ./Bench2Drive/CIL_b2d_traj/central_{self.video_id}_color_video.mp4")
-        os.system(f"ffmpeg -framerate 30 -i ./Bench2Drive/CIL_b2d_traj/central_{self.video_id}_%05d.jpg -c:v libx264 -pix_fmt yuv420p ./Bench2Drive/CIL_b2d_traj/central_{self.video_id}_color_video.mp4")
-        os.system(f"rm ./Bench2Drive/CIL_b2d_traj/*{self.video_id}*.jpg")
+        print(f"ffmpeg -framerate 30 -i ./Bench2Drive/videos/central_{self.model_name}_{self.video_id}_%05d.jpg -c:v libx264 -pix_fmt yuv420p ./Bench2Drive/videos/central_{self.model_name}_{self.video_id}_color_video.mp4")
+        os.system(f"ffmpeg -framerate 30 -i ./Bench2Drive/videos/central_{self.model_name}_{self.video_id}_%05d.jpg -c:v libx264 -pix_fmt yuv420p ./Bench2Drive/videos/central_{self.model_name}_{self.video_id}_color_video.mp4")
+        os.system(f"rm ./Bench2Drive/videos/*{self.video_id}*.jpg")
         
     def set_global_plan(self, global_plan_gps, global_plan_world_coord):
         super().set_global_plan(global_plan_gps, global_plan_world_coord)
         self._global_plan_gps = global_plan_gps
         self._global_plan_world_coord = global_plan_world_coord
+        
+class RoadOption(Enum):
+    """
+    RoadOption represents the possible topological configurations when moving from a segment of lane to other.
+    """
+    VOID = -1
+    LEFT = 1
+    RIGHT = 2
+    STRAIGHT = 3
+    LANEFOLLOW = 4
+    CHANGELANELEFT = 5
+    CHANGELANERIGHT = 6
