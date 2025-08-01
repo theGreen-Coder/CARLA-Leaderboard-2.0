@@ -17,11 +17,11 @@
 #export PYTHONPATH="${CARLA_ROOT}/PythonAPI/carla/":"${SCENARIO_RUNNER_ROOT}":"${LEADERBOARD_ROOT}":${PYTHONPATH}
 
 # JS WORK_DIR is different from that in exports.sh so we better set all the exports here
-export CARLA_ROOT=/home/your-home/Code/CARLA-Leaderboard-2.0/carla
-export WORK_DIR=/home/your-home/Code/CARLA-Leaderboard-2.0/Bench2Drive
+export CARLA_ROOT=/home/your-name/Code/CARLA-Leaderboard-2.0/carla
+export WORK_DIR=/home/your-name/Code/CARLA-Leaderboard-2.0/Bench2Drive
 export SCENARIO_RUNNER_ROOT=${WORK_DIR}/scenario_runner
 export LEADERBOARD_ROOT=${WORK_DIR}/leaderboard
-export PYTHONPATH=$PYTHONPATH:/home/your-home/Code/CARLA-Leaderboard-2.0/team_code
+export PYTHONPATH=$PYTHONPATH:/home/your-name/Code/CARLA-Leaderboard-2.0/team_code
 export PYTHONPATH="${CARLA_ROOT}/PythonAPI/carla/":"${SCENARIO_RUNNER_ROOT}":"${LEADERBOARD_ROOT}":${PYTHONPATH}
 export LD_LIBRARY_PATH="$CONDA_PREFIX/lib"  # JS this one was missing
 export LOG_LEVEL=DEBUG
@@ -33,9 +33,9 @@ IS_BENCH2DRIVE=True
 BASE_ROUTES=${WORK_DIR}/leaderboard/data/bench2drive220
 #TEAM_AGENT=/mnt/lustre/work/geiger/bjaeger25/garage_2_cleanup/team_code/sensor_agent.py
 # Must set YOUR_CKPT_PATH
-TEAM_AGENT=/home/your-home/Code/CARLA-Leaderboard-2.0/team_code/sensor_agent.py
+TEAM_AGENT=/home/your-name/Code/CARLA-Leaderboard-2.0/team_code/sensor_agent.py
 #TEAM_CONFIG=/mnt/lustre/work/geiger/bjaeger25/garage_2_cleanup/team_code/checkpoints/tfpp_009_ensemble_0_1_2
-GARAGE_ROOT=/home/your-home/Code/CARLA-Leaderboard-2.0  # JS this is not the same as WORK_DIR
+GARAGE_ROOT=/home/your-name/Code/CARLA-Leaderboard-2.0  # JS this is not the same as WORK_DIR
 TEAM_CONFIG=$GARAGE_ROOT/pretrained_models/all_towns  # all_towns, town13_withheld
 BASE_CHECKPOINT_ENDPOINT=eval_bench2drive220
 PLANNER_TYPE=traj

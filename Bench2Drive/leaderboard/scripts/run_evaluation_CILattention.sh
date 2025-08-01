@@ -15,11 +15,11 @@
 #############################
 
 ############### PATH EXPORTS ###############
-export CARLA_ROOT=/home/your-home/Code/CARLA-Leaderboard-2.0/carla
-export WORK_DIR=/home/your-home/Code/CARLA-Leaderboard-2.0/Bench2Drive
+export CARLA_ROOT=/home/your-name/Code/CARLA-Leaderboard-2.0/carla
+export WORK_DIR=/home/your-name/Code/CARLA-Leaderboard-2.0/Bench2Drive
 export SCENARIO_RUNNER_ROOT=${WORK_DIR}/scenario_runner
 export LEADERBOARD_ROOT=${WORK_DIR}/leaderboard
-export PYTHONPATH=$PYTHONPATH:/home/your-home/Code/CARLA-Leaderboard-2.0/team_code_CIL
+export PYTHONPATH=$PYTHONPATH:/home/your-name/Code/CARLA-Leaderboard-2.0/team_code_CIL
 export PYTHONPATH="${CARLA_ROOT}/PythonAPI/carla/":"${SCENARIO_RUNNER_ROOT}":"${LEADERBOARD_ROOT}":${PYTHONPATH}
 export LD_LIBRARY_PATH="$CONDA_PREFIX/lib"  # JS this one was missing
 
@@ -34,8 +34,8 @@ BASE_PORT=30000
 BASE_TM_PORT=50000
 IS_BENCH2DRIVE=True
 BASE_ROUTES=${WORK_DIR}/leaderboard/data/bench2drive220
-TEAM_AGENT=/home/your-home/Code/CARLA-Leaderboard-2.0/team_code_CIL/CILv2_agent.py
-GARAGE_ROOT=/home/your-home/Code/CARLA-Leaderboard-2.0
+TEAM_AGENT=/home/your-name/Code/CARLA-Leaderboard-2.0/team_code_CIL/CILv2_agent.py
+GARAGE_ROOT=/home/your-name/Code/CARLA-Leaderboard-2.0
 TEAM_CONFIG=$GARAGE_ROOT/pretrained_models/CILattention # CHANGE IN THIS LINE 
 BASE_CHECKPOINT_ENDPOINT=eval_bench2drive220
 PLANNER_TYPE=traj
