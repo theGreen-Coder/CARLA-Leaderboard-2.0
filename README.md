@@ -37,16 +37,16 @@ The leaderboard 1.0 code can be found on the <a href="https://github.com/autonom
 
 Clone the repo, setup CARLA 0.9.15, and build the conda environment:
 ```Shell
-git clone https://github.com/autonomousvision/carla_garage.git
-cd carla_garage
+git clone https://github.com/theGreen-Coder/CARLA-Leaderboard-2.0/
+cd CARLA-Leaderboard-2.0
 git checkout leaderboard_2
 chmod +x setup_carla.sh
 ./setup_carla.sh
 conda env create -f environment.yml
-conda activate garage_2
+conda activate leaderboard2
 ```
 
-Before running the code, you will need to add the following paths to PYTHONPATH on your system:
+Before running the code, you will need to edit the following paths in the bash script that you run (or directly export them beforehand):
 ```Shell
 export CARLA_ROOT=/path/to/CARLA/root
 export WORK_DIR=/path/to/carla_garage
@@ -57,6 +57,14 @@ export PYTHONPATH="${CARLA_ROOT}/PythonAPI/carla/":"${SCENARIO_RUNNER_ROOT}":"${
 ```
 You can add this in your shell scripts or directly integrate it into your favorite IDE. \
 E.g. in PyCharm: Settings -> Project -> Python Interpreter -> Show all -> garage (need to add from existing conda environment first) -> Show Interpreter Paths -> add all the absolute paths above (without pythonpath).
+
+## Setup (CVC)
+In order to properly evaluate CIL++, CILattention, and Transfuser++ run the setup_CVC.sh
+
+```Shell
+chmod +x setup_CVC.sh
+./setup_CVC.sh
+```
 
 ## Pre-Trained Models
 We provide a set of [pretrained models](https://s3.eu-central-1.amazonaws.com/avg-projects-2/garage_2/models/pretrained_models.zip).
