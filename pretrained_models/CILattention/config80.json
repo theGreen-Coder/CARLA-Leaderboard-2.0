@@ -1,0 +1,6 @@
+{
+    "agent_name": "CIL++",
+    "checkpoint": 80,
+    "yaml": "CILv2_3cam_Town01_14hdata_AttentionLossKL_AreaDownsampling_notBinarized_20xAttLoss_bs120.yaml",
+    "lens_circle_set": false
+}
